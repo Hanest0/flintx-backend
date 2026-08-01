@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from jose import jwt, JWTError
-from passlib.context import CryptContext
+import bcrypt as _bcrypt
 from sqlalchemy.orm import Session
 
 from ..database.models import User, RefreshToken, AccountStatus
@@ -20,7 +20,7 @@ ALGORITHM        = "HS256"
 ACCESS_EXPIRE_M  = 30          # 30 minutes
 REFRESH_EXPIRE_D = 30          # 30 days
 
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt used directly — no passlib CryptContext needed
 
 
 # ─────────────────────────────────────────────
@@ -28,11 +28,14 @@ pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # ─────────────────────────────────────────────
 
 def hash_password(password: str) -> str:
-    return pwd_ctx.hash(password)
+    return _bcrypt.hashpw(password.encode(), _bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_ctx.verify(plain, hashed)
+    try:
+        return _bcrypt.checkpw(plain.encode(), hashed.encode())
+    except Exception:
+        return False
 
 
 def validate_password_strength(password: str) -> tuple[bool, str]:
