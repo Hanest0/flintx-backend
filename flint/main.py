@@ -102,9 +102,21 @@ httpOnly cookie to get a new one.
 )
 
 # ── CORS ──────────────────────────────────────────────────────────────
+# All allowed origins — add any new domains here
+ALLOWED_ORIGINS = [
+    FRONTEND_URL,
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://vdm-technology.vercel.app",
+    "https://vdm-technology-hanest0.vercel.app",
+    "https://vdm-technology-git-main-hanest0.vercel.app",
+    "https://flintx.tv",
+    "https://www.flintx.tv",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins     = [FRONTEND_URL, "http://localhost:3000"],
+    allow_origins     = ALLOWED_ORIGINS,
     allow_credentials = True,
     allow_methods     = ["*"],
     allow_headers     = ["*"],
