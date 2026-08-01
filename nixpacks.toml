@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ["python312"]
+
+[phases.install]
+cmds = [
+  "pip install --upgrade pip",
+  "pip install bcrypt==4.0.1",
+  "pip install -r requirements.txt"
+]
+
+[start]
+cmd = "uvicorn flint.main:app --host 0.0.0.0 --port $PORT"
