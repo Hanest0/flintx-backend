@@ -114,10 +114,12 @@ ALLOWED_ORIGINS = [
     "https://www.flintx.tv",
 ]
 
+# Temporarily allow all origins to unblock launch
+# Restrict to specific domains once confirmed working
 app.add_middleware(
     CORSMiddleware,
-    allow_origins     = ALLOWED_ORIGINS,
-    allow_credentials = True,
+    allow_origins     = ["*"],
+    allow_credentials = False,
     allow_methods     = ["*"],
     allow_headers     = ["*"],
 )
