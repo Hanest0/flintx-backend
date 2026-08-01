@@ -70,31 +70,28 @@ async def lifespan(app: FastAPI):
     print("[FlintX] Shutting down")
 
 
-app = FastAPI(
-
-# ── Bulletproof CORS — injects headers on every single response ────────
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request as StarletteRequest
 
 class ForceCORSMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: StarletteRequest, call_next):
+    """Injects CORS headers on every response — bulletproof fallback."""
+    async def dispatch(self, request, call_next):
         if request.method == "OPTIONS":
-            from starlette.responses import Response as StarletteResponse
-            response = StarletteResponse()
-            response.headers["Access-Control-Allow-Origin"]  = "*"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept"
-            response.headers["Access-Control-Max-Age"]       = "86400"
-            return response
+            from starlette.responses import Response
+            res = Response()
+            res.headers["Access-Control-Allow-Origin"]  = "*"
+            res.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+            res.headers["Access-Control-Allow-Headers"] = "Authorization,Content-Type,Accept"
+            res.headers["Access-Control-Max-Age"]       = "86400"
+            return res
         response = await call_next(request)
         response.headers["Access-Control-Allow-Origin"]  = "*"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept"
+        response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Authorization,Content-Type,Accept"
         return response
 
-app.add_middleware(ForceCORSMiddleware)
 
-    title       = "FlintXX API",
+app = FastAPI(
+    title       = "FlintX API",
     version     = "1.0.0",
     description = """
 Flint — The platform that pays creators AND viewers.
@@ -146,6 +143,8 @@ app.add_middleware(
     allow_methods     = ["*"],
     allow_headers     = ["*"],
 )
+app.add_middleware(ForceCORSMiddleware)
+
 
 # ── Routers ───────────────────────────────────────────────────────────
 app.include_router(auth_router,        prefix="/api")
