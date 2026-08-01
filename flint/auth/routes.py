@@ -155,13 +155,18 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
     if not valid:
         raise HTTPException(status_code=422, detail=msg)
 
+    # Auto-verify when no RESEND_API_KEY set (launch mode — no email service yet)
+    import os as _os
+    _auto = not bool(_os.getenv("RESEND_API_KEY", ""))
+
     user = User(
-        email         = req.email.lower(),
-        password_hash = hash_password(req.password),
-        full_name     = req.full_name,
-        country       = req.country,
-        role          = UserRole(req.role),
-        status        = AccountStatus.pending,
+        email          = req.email.lower(),
+        password_hash  = hash_password(req.password),
+        full_name      = req.full_name,
+        country        = req.country,
+        role           = UserRole(req.role),
+        email_verified = _auto,
+        status         = AccountStatus.active if _auto else AccountStatus.pending,
     )
     db.add(user)
     db.flush()
@@ -258,7 +263,7 @@ def login(req: LoginRequest, response: Response, request: Request, db: Session =
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     if user.status == AccountStatus.banned:
         raise HTTPException(status_code=403, detail="This account has been suspended")
-    if not user.email_verified:
+    if not user.email_verified and user.status != AccountStatus.active:
         raise HTTPException(status_code=403, detail="Please verify your email before logging in")
 
     access_token  = create_access_token(user.id, user.role.value)
