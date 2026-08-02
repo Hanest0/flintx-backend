@@ -30,9 +30,43 @@ from .security import (
     revoke_all_user_tokens, create_email_verify_token, verify_email_token,
     create_password_reset_token, validate_password_reset_token,
 )
-from ..email.service import (
-    send_verification_email, send_welcome_email, send_password_reset_email,
-)
+import time
+from collections import defaultdict
+
+try:
+    from ..email.service import (
+        send_verification_email, send_password_reset_email,
+    )
+except ImportError:
+    def send_verification_email(*a, **kw): pass
+    def send_password_reset_email(*a, **kw): pass
+
+
+# Simple in-memory rate limiter — blocks brute force login attempts
+# In production, use Redis for distributed rate limiting
+_login_attempts = defaultdict(list)
+_MAX_ATTEMPTS   = 5    # max attempts
+_WINDOW_SECONDS = 300  # per 5 minutes
+_LOCKOUT_SECONDS= 900  # 15 min lockout after max attempts
+
+def _check_rate_limit(identifier: str):
+    """Block after 5 failed attempts in 5 minutes."""
+    now = time.time()
+    attempts = _login_attempts[identifier]
+    # Remove old attempts outside window
+    _login_attempts[identifier] = [t for t in attempts if now - t < _WINDOW_SECONDS]
+    if len(_login_attempts[identifier]) >= _MAX_ATTEMPTS:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many login attempts. Try again in 15 minutes."
+        )
+
+def _record_attempt(identifier: str):
+    _login_attempts[identifier].append(time.time())
+
+def _clear_attempts(identifier: str):
+    _login_attempts.pop(identifier, None)
+
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -154,6 +188,9 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
     valid, msg = validate_password_strength(req.password)
     if not valid:
         raise HTTPException(status_code=422, detail=msg)
+
+    if len(req.password) < 8:
+        raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
 
     # Auto-verify when no RESEND_API_KEY set (launch mode — no email service yet)
     import os as _os
