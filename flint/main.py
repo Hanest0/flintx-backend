@@ -70,6 +70,27 @@ async def lifespan(app: FastAPI):
     print("[FlintX] Shutting down")
 
 
+
+from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
+
+class SecurityHeadersMiddleware(_BaseHTTPMiddleware):
+    """Adds security headers to every response."""
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        # Prevent clickjacking
+        response.headers["X-Frame-Options"] = "DENY"
+        # Prevent MIME sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        # XSS protection
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        # Don't leak referrer info
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Strict HTTPS (1 year)
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        # Content Security Policy — allow FlintX frontend only
+        response.headers["Content-Security-Policy"] = "default-src 'self'"
+        return response
+
 from starlette.middleware.base import BaseHTTPMiddleware
 
 class ForceCORSMiddleware(BaseHTTPMiddleware):
@@ -144,6 +165,7 @@ app.add_middleware(
     allow_headers     = ["*"],
 )
 app.add_middleware(ForceCORSMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 # ── Routers ───────────────────────────────────────────────────────────
