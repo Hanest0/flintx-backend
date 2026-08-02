@@ -40,6 +40,7 @@ from ..database.models import (
 )
 from ..auth.routes import require_verified, require_admin
 from ..currency.service import CurrencyService
+from ..security.crypto import encrypt_field, decrypt_field
 from .models import (
     PlatformState, ViewerMilestone, UniqueViewerRecord,
     CreatorCreditLedger, FoundingCreator, PhaseTransitionLog,
@@ -443,6 +444,7 @@ def request_payout(
         amount  = available,
         method  = req.method,
         status  = "pending",
+        email   = encrypt_field(req.email),  # encrypted at rest
     )
     db.add(payout)
 
