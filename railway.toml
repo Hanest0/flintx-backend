@@ -1,4 +1,3 @@
 [deploy]
 startCommand = "uvicorn flint.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
-restartPolicyType = "on_failure"
