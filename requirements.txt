@@ -1,45 +1,18 @@
-# Flint Backend — Python Dependencies
-# Install: pip install -r requirements.txt
+# FlintX Backend — Python Dependencies
 
-# ── Web Framework ─────────────────────────────────────────────────────
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
-
-# ── Database ──────────────────────────────────────────────────────────
 sqlalchemy==2.0.36
 alembic==1.14.0
-psycopg2-binary==2.9.10      # PostgreSQL driver (Supabase)
-
-# ── Auth & Security ───────────────────────────────────────────────────
+psycopg2-binary==2.9.10
 python-jose[cryptography]==3.3.0
 passlib==1.7.4
 bcrypt==4.0.1
 python-multipart==0.0.12
-
-# ── HTTP Client ───────────────────────────────────────────────────────
-httpx==0.28.0
-
-# ── AWS ───────────────────────────────────────────────────────────────
+cryptography>=41.0.0
+httpx==0.27.0
 boto3==1.35.0
-
-# ── Email ─────────────────────────────────────────────────────────────
-# Using Resend HTTP API directly via httpx — no extra package needed
-
-# ── Background Jobs ───────────────────────────────────────────────────
-apscheduler==3.10.4          # runs algorithm scorer hourly
-celery[redis]==5.4.0          # optional — for heavy background jobs
-redis==5.2.0                 # celery broker + cache
-
-# ── Config ────────────────────────────────────────────────────────────
+apscheduler==3.10.4
 python-dotenv==1.0.1
 pydantic[email]==2.10.0
-
-# ── PDF Reports (monthly advertiser reports) ─────────────────────────
-weasyprint==62.3             # HTML→PDF for monthly reports
-# OR: reportlab==4.2.5       # lighter alternative
-
-# ── Dev only ─────────────────────────────────────────────────────────
 pytest==8.3.3
-pytest-asyncio==0.24.0
-httpx==0.28.0                # for TestClient
-# Build trigger: 2026-08-01T19:48:21.309148
