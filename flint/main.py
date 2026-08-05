@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 ENVIRONMENT  = os.getenv("ENVIRONMENT", "development")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://vdm-technology.vercel.app")
 
 from .database.connection  import create_tables
 from .auth.routes          import router as auth_router
@@ -38,6 +38,8 @@ async def lifespan(app: FastAPI):
     _db = _SL()
     try:
         seed_platform_products(_db)
+    except Exception as e:
+        print(f"[FlintX] Seed error (non-fatal): {e}")
     finally:
         _db.close()
     print(f"[FlintX] Ready — {ENVIRONMENT}")
@@ -51,35 +53,34 @@ async def lifespan(app: FastAPI):
             scheduler.add_job(score_all_videos, "interval", hours=1)
             scheduler.add_job(run_monthly_badge_credits, "cron", day=1, hour=0)
             scheduler.start()
-            print("[FlintX] Scheduler started")
         except Exception as e:
             print(f"[FlintX] Scheduler error (non-fatal): {e}")
 
     yield
 
 
+# ── App ───────────────────────────────────────────────────────────────
 app = FastAPI(
     title="FlintX API",
     version="1.0.0",
     lifespan=lifespan,
 )
 
+
+# ── CORS — MUST be first middleware ──────────────────────────────────
+# Allow all origins for now to ensure connectivity
+# Tighten after confirming backend is reachable
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        FRONTEND_URL,
-        "https://vdm-technology.vercel.app",
-        "https://vdm-technology-hanest0.vercel.app",
-        "https://flintx.tv",
-        "https://www.flintx.tv",
-        "http://localhost:3000",
-        "http://localhost:5173",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
+
+# ── Routes ────────────────────────────────────────────────────────────
 app.include_router(auth_router,           prefix="/api")
 app.include_router(videos_router,         prefix="/api")
 app.include_router(studio_router,         prefix="/api")
@@ -96,12 +97,17 @@ app.include_router(affiliate_router,      prefix="/api")
 app.include_router(affiliate_router,      prefix="")
 app.include_router(connected_apps_router, prefix="/api")
 app.include_router(child_safety_router,   prefix="/api")
-app.include_router(music_router,           prefix="/api")
+app.include_router(music_router,          prefix="/api")
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "platform": "FlintX", "environment": ENVIRONMENT, "version": "1.0.0"}
+    return {
+        "status": "ok",
+        "platform": "FlintX",
+        "environment": ENVIRONMENT,
+        "version": "1.0.0",
+    }
 
 
 @app.get("/")
