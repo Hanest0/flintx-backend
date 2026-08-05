@@ -28,6 +28,7 @@ from .payouts.routes       import router as payouts_router
 from .affiliate.routes     import router as affiliate_router, seed_platform_products
 from .connected_apps.routes import router as connected_apps_router
 from .child_safety.routes   import router as child_safety_router
+from .music.routes           import router as music_router
 
 
 @asynccontextmanager
@@ -95,6 +96,7 @@ app.include_router(affiliate_router,      prefix="/api")
 app.include_router(affiliate_router,      prefix="")
 app.include_router(connected_apps_router, prefix="/api")
 app.include_router(child_safety_router,   prefix="/api")
+app.include_router(music_router,           prefix="/api")
 
 
 @app.get("/health")
