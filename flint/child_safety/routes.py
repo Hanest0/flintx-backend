@@ -240,3 +240,83 @@ def reject_kids_corner(
     except HTTPException: raise
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+# ── Parental Consent ──────────────────────────────────────────────────
+from pydantic import BaseModel as _BaseModel
+
+class ParentalConsentRequest(_BaseModel):
+    parentName:    str
+    parentEmail:   str
+    parentDob:     str
+    parentPhone:   str = ""
+    relationship:  str = "parent"
+    child_age:     int
+    agreeTerms:    bool = False
+    agreeModeration: bool = False
+    agreeRevenue:  bool = False
+    agreeContent:  bool = False
+
+
+@router.post("/parental-consent")
+def submit_parental_consent(
+    req: ParentalConsentRequest,
+    user: User = Depends(require_verified),
+    db:   Session = Depends(get_db),
+):
+    """
+    Record parental consent for a minor creator account.
+    Parent must be 18+. All four agreements must be true.
+    """
+    # Verify all agreements
+    if not all([req.agreeTerms, req.agreeModeration, req.agreeRevenue, req.agreeContent]):
+        raise HTTPException(400, "All consent items must be agreed to.")
+
+    # Verify parent age
+    try:
+        from datetime import date as _date
+        parent_dob = _date.fromisoformat(req.parentDob)
+        parent_age = (_date.today() - parent_dob).days // 365
+        if parent_age < 18:
+            raise HTTPException(400, "Parent or guardian must be 18 or older.")
+    except ValueError:
+        raise HTTPException(400, "Invalid date of birth format.")
+
+    # Record consent on user account
+    try:
+        import json as _json
+        from datetime import datetime as _dt
+        consent_record = {
+            "parent_name":     req.parentName,
+            "parent_email":    req.parentEmail,
+            "relationship":    req.relationship,
+            "consented_at":    _dt.utcnow().isoformat(),
+            "child_age":       req.child_age,
+            "ip_timestamp":    _dt.utcnow().isoformat(),
+            "agreements": {
+                "terms":       req.agreeTerms,
+                "moderation":  req.agreeModeration,
+                "revenue":     req.agreeRevenue,
+                "content":     req.agreeContent,
+            }
+        }
+        user.parental_consent = _json.dumps(consent_record)
+        user.parental_consent_given = True
+        db.commit()
+    except Exception as e:
+        raise HTTPException(500, f"Could not record consent: {e}")
+
+    # Determine moderation level for this child
+    from .policy import ModerationLevel, RevenueShare
+    mod_level = ModerationLevel.for_age(req.child_age)
+    revenue   = RevenueShare.for_age(req.child_age)
+
+    return {
+        "consent_recorded":   True,
+        "child_age":          req.child_age,
+        "moderation_level":   mod_level,
+        "moderation_description": ModerationLevel.description(mod_level),
+        "revenue_share":      revenue,
+        "payout_to":          "parent_guardian",
+        "note":               "Consent recorded. Account is now active with enhanced moderation.",
+    }
