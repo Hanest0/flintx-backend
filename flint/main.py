@@ -1,9 +1,9 @@
 """
-FlintX — FastAPI Backend
+FlintX Backend
 """
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -39,11 +39,10 @@ async def lifespan(app: FastAPI):
     try:
         seed_platform_products(_db)
     except Exception as e:
-        print(f"[FlintX] Seed error (non-fatal): {e}")
+        print(f"[FlintX] Seed warning: {e}")
     finally:
         _db.close()
     print(f"[FlintX] Ready — {ENVIRONMENT}")
-
     if ENVIRONMENT == "production":
         try:
             from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -54,30 +53,36 @@ async def lifespan(app: FastAPI):
             scheduler.add_job(run_monthly_badge_credits, "cron", day=1, hour=0)
             scheduler.start()
         except Exception as e:
-            print(f"[FlintX] Scheduler error (non-fatal): {e}")
-
+            print(f"[FlintX] Scheduler warning: {e}")
     yield
 
 
-# ── App ───────────────────────────────────────────────────────────────
-app = FastAPI(
-    title="FlintX API",
-    version="1.0.0",
-    lifespan=lifespan,
-)
+app = FastAPI(title="FlintX API", version="1.0.0", lifespan=lifespan)
 
 
-# ── CORS — MUST be first middleware ──────────────────────────────────
-# Allow all origins for now to ensure connectivity
-# Tighten after confirming backend is reachable
+# ── CORS — wildcard, no credentials ──────────────────────────────────
+# Simple and always works. Frontend uses Bearer token not cookies.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
 )
+
+
+# ── Explicit OPTIONS handler — catches preflight before routers ───────
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(request: Request, rest_of_path: str) -> Response:
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin":  "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Max-Age":       "86400",
+        },
+    )
 
 
 # ── Routes ────────────────────────────────────────────────────────────
@@ -102,14 +107,9 @@ app.include_router(music_router,          prefix="/api")
 
 @app.get("/health")
 def health():
-    return {
-        "status": "ok",
-        "platform": "FlintX",
-        "environment": ENVIRONMENT,
-        "version": "1.0.0",
-    }
+    return {"status": "ok", "platform": "FlintX", "environment": ENVIRONMENT}
 
 
 @app.get("/")
 def root():
-    return {"message": "FlintX API — visit /docs"}
+    return {"message": "FlintX API — /docs"}
