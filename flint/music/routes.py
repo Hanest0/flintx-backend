@@ -95,117 +95,21 @@ def declare_music_rights(
     }
 
     return {
-        "recorded":    True,
-        "declaration": declaration,
-        "legal_note":  "This declaration is legally binding. False declarations may result in account suspension and legal liability.",
-    }
-
-
-@router.get("/licensing-status")
-def licensing_status(country: str = "US"):
-    """
-    Return licensing compliance status for a given country.
-    """
-    country = country.upper()
-
-    if country in BLOCKED_REGIONS:
-        return {
-            "country": country,
-            "status": "blocked",
-            "reason": "FlintX does not operate in this region.",
-            "licensed": False,
-        }
-
-    pros = LICENSED_REGIONS.get(country, LICENSED_REGIONS["DEFAULT"])
-
-    return {
-        "country":    country,
-        "status":     "licensed",
-        "licensed":   True,
-        "organisations": pros,
-        "covers":     "Public performance + sync rights for FlintX platform use",
-        "note":       "Creators using FlintX Music Library are fully indemnified.",
-    }
-
-
-@router.get("/library")
-def get_music_library(
-    genre:  Optional[str] = None,
-    mood:   Optional[str] = None,
-    limit:  int = 50,
-):
-    """
-    Return available licensed tracks.
-    In production: pulls from Epidemic Sound enterprise API.
-    """
-    # Demo tracks — replace with Epidemic Sound API integration
-    tracks = [
-        {"id":"t1","title":"Morning Light",       "artist":"FlintX Studio","genre":"Ambient",    "mood":"Uplifting","bpm":90, "duration_s":204,"licensed_by":"epidemic_sound"},
-        {"id":"t2","title":"Deep Focus",          "artist":"FlintX Studio","genre":"Electronic", "mood":"Focused",  "bpm":120,"duration_s":252,"licensed_by":"epidemic_sound"},
-        {"id":"t3","title":"Street Stories",      "artist":"FlintX Studio","genre":"Hip-Hop",    "mood":"Energetic","bpm":95, "duration_s":178,"licensed_by":"epidemic_sound"},
-        {"id":"t4","title":"Golden Hour",         "artist":"FlintX Studio","genre":"Indie",      "mood":"Warm",     "bpm":85, "duration_s":225,"licensed_by":"epidemic_sound"},
-        {"id":"t5","title":"Late Night Sessions", "artist":"FlintX Studio","genre":"Jazz",       "mood":"Relaxed",  "bpm":70, "duration_s":310,"licensed_by":"epidemic_sound"},
-        {"id":"t6","title":"Epic Journey",        "artist":"FlintX Studio","genre":"Cinematic",  "mood":"Powerful", "bpm":110,"duration_s":238,"licensed_by":"epidemic_sound"},
-        {"id":"t7","title":"Urban Pulse",         "artist":"FlintX Studio","genre":"Electronic", "mood":"Energetic","bpm":128,"duration_s":213,"licensed_by":"epidemic_sound"},
-        {"id":"t8","title":"Quiet Places",        "artist":"FlintX Studio","genre":"Ambient",    "mood":"Calm",     "bpm":65, "duration_s":284,"licensed_by":"epidemic_sound"},
-    ]
-
-    if genre:
-        tracks = [t for t in tracks if t["genre"].lower() == genre.lower()]
-    if mood:
-        tracks = [t for t in tracks if t["mood"].lower() == mood.lower()]
-
-    return {
-        "tracks":       tracks[:limit],
-        "total":        len(tracks),
-        "licensed_by":  "Epidemic Sound Enterprise",
-        "coverage":     "190+ countries excluding Iran, North Korea, China",
-        "rights":       "Sync + performance rights included. No copyright claims.",
-    }
-
-
-@router.post("/request-distribution")
-def request_distribution(
-    req: DistributionRequest,
-    user: User = Depends(require_verified),
-):
-    """
-    Queue an original track for global distribution.
-    FlintX takes 15% of streaming royalties.
-    """
-    return {
-        "queued":      True,
-        "track":       req.track_title,
-        "artist":      req.artist_name,
-        "plan":        req.plan,
-        "flintx_take": "15%",
-        "creator_take": "85%",
-        "platforms":   ["Spotify","Apple Music","Tidal","Amazon Music","Deezer","YouTube Music","150+ more"],
-        "timeline":    "3-5 business days",
-        "note":        "Distribution powered by FlintX Distribution Service. ISRC generated automatically.",
-        "status":      "pending_review",
-    }
-
-
-@router.get("/compliance-report")
-def compliance_report():
-    """Public compliance report — shows all active licences."""
-    return {
-        "platform":   "FlintX",
-        "updated":    datetime.utcnow().isoformat(),
-        "music_policy": "FlintX Music Library contains original compositions only. PRO licences pending.",
+        "platform":    "FlintX",
+        "updated":     datetime.utcnow().isoformat(),
+        "music_policy": "Original compositions only. No copyrighted music permitted without creator-held licence.",
         "licences": [
-            {"region":"United States",  "organisations":["ASCAP","BMI","SESAC"],  "status":"pending_application"},
-            {"region":"United Kingdom", "organisations":["PRS for Music"],         "status":"pending_application"},
-            {"region":"Australia",      "organisations":["APRA AMCOS"],            "status":"pending_application"},
-            {"region":"Canada",         "organisations":["SOCAN"],                 "status":"pending_application"},
-            {"region":"Global",         "organisations":["Epidemic Sound"],        "status":"in_negotiation"},
-            {"region":"Iran",           "organisations":["Blocked - OFAC"],        "status":"blocked"},
-            {"region":"North Korea",    "organisations":["Blocked - UN sanctions"],"status":"blocked"},
-            {"region":"China",          "organisations":["Blocked - local law"],   "status":"blocked"},
+            {"region":"United States",  "organisations":["ASCAP","BMI","SESAC"],  "status":"pending_application", "note":"Applications not yet submitted"},
+            {"region":"United Kingdom", "organisations":["PRS for Music"],         "status":"pending_application", "note":"Application not yet submitted"},
+            {"region":"Australia",      "organisations":["APRA AMCOS"],            "status":"pending_application", "note":"Application not yet submitted"},
+            {"region":"Canada",         "organisations":["SOCAN"],                 "status":"pending_application", "note":"Application not yet submitted"},
+            {"region":"Global Library", "organisations":["Epidemic Sound"],        "status":"in_negotiation",      "note":"Enterprise deal not yet signed"},
+            {"region":"Iran",           "organisations":["Blocked — OFAC"],        "status":"blocked"},
+            {"region":"North Korea",    "organisations":["Blocked — UN sanctions"],"status":"blocked"},
+            {"region":"China",          "organisations":["Blocked — local law"],   "status":"blocked"},
         ],
-        "original_music":    "Free to use on FlintX — no licence required",
-        "copyrighted_music": "Creator must own rights or have valid licence — declared at upload",
-        "content_id":        "ACRCloud integration planned — activates with PRO licences",
+        "what_is_allowed":   "Original music created by the uploader only",
+        "what_is_prohibited": "Any copyrighted music without a valid personal licence",
+        "content_id":        "ACRCloud integration planned — not yet active",
         "legal_contact":     "legal@flintx.tv",
     }
