@@ -202,7 +202,8 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
         full_name      = req.full_name,
         country        = req.country,
         role           = UserRole(req.role),
-        email_verified = _auto,
+        email_verified = True,
+        status        = AccountStatus.active,
         status         = AccountStatus.active if _auto else AccountStatus.pending,
     )
     db.add(user)
@@ -300,8 +301,8 @@ def login(req: LoginRequest, response: Response, request: Request, db: Session =
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     if user.status == AccountStatus.banned:
         raise HTTPException(status_code=403, detail="This account has been suspended")
-    if not user.email_verified and user.status != AccountStatus.active:
-        raise HTTPException(status_code=403, detail="Please verify your email before logging in")
+    # Email gate removed — users auto-verified at signup
+    # Resend RESEND_API_KEY to Railway when ready for real email verification
 
     access_token  = create_access_token(user.id, user.role.value)
     refresh_token = create_refresh_token(db, user.id,
